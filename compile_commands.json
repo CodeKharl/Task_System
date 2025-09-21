@@ -1,0 +1,38 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++20",
+      "-Wall",
+      "-Wextra",
+      "-g",
+      "-I",
+      "include",
+      "-c",
+      "-o",
+      "build/main.o",
+      "src/main.cpp"
+    ],
+    "directory": "/home/kharl/Desktop/C++/task_system",
+    "file": "/home/kharl/Desktop/C++/task_system/src/main.cpp",
+    "output": "/home/kharl/Desktop/C++/task_system/build/main.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++20",
+      "-Wall",
+      "-Wextra",
+      "-g",
+      "-I",
+      "include",
+      "-c",
+      "-o",
+      "build/task/Task.o",
+      "src/task/Task.cpp"
+    ],
+    "directory": "/home/kharl/Desktop/C++/task_system",
+    "file": "/home/kharl/Desktop/C++/task_system/src/task/Task.cpp",
+    "output": "/home/kharl/Desktop/C++/task_system/build/task/Task.o"
+  }
+]
