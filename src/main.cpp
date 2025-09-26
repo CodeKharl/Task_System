@@ -15,10 +15,9 @@ static bool add(const char **argv);
 static bool remove(const char **argv);
 static bool list(const char **argv);
 static bool modify(const char **argv);
+static std::unique_ptr<Task> create_unique_task_ptr(const char **argv);
 
-static std::unique_ptr<Task> create_shr_task_ptr(const char *argv[]);
-
-constexpr std::size_t NUMBER_OF_FUNCS = 4;
+static constexpr std::size_t NUMBER_OF_FUNCS = 4;
 using Func = bool (*)(const char *argv[]);
 
 struct Entry {
@@ -26,22 +25,13 @@ struct Entry {
     Func func;
 };
 
-constexpr std::array<Entry, NUMBER_OF_FUNCS> func_arr = {{"add", add}};
-
-constexpr Func find_func(std::string_view &operation) {
-    for (const Entry &entry : func_arr) {
-        if (entry.key == operation)
-            return entry.func;
-    }
-
-    return nullptr;
-}
+static constexpr std::array<Entry, NUMBER_OF_FUNCS> func_arr = {{"add", add}};
+static constexpr Func find_func(const std::string_view &operation);
+static void display_usage_cmd(const std::string_view &prg_exe_name);
 
 int main(int argc, const char **argv) {
     if (argc <= 1) {
-        std::cerr << "Usage: " << argv[0] << " <command>\n"
-                  << "Commands: add, list, remove, modify" << std::endl;
-
+        display_usage_cmd(argv[0]);
         return 1;
     }
 
@@ -51,14 +41,38 @@ int main(int argc, const char **argv) {
     }
 
     std::cerr << "Unknown command : " << operation << std::endl;
+    display_usage_cmd(argv[0]);
 
-    return 0;
+    return 1;
 }
 
-bool add(const char **argv) {
+static constexpr Func find_func(const std::string_view &operation) {
+    for (const Entry &entry : func_arr) {
+        if (entry.key == operation)
+            return entry.func;
+    }
+
+    return nullptr;
+}
+
+static void display_usage_cmd(const std::string_view &prg_exe_name) {
+    std::cerr << "Usage: " << prg_exe_name << " <command>\n"
+              << "Commands: add, list, remove, modify" << std::endl;
+}
+
+static bool add(const char **argv) {
     std::fstream task_file(TASK_FILE, std::ios::binary | std::ios::app);
 
-    if (add_task(task_file, *create_shr_task_ptr(argv))) {
+    std::unique_ptr<Task> new_unique_task = create_unique_task_ptr(argv);
+
+    if (!new_unique_task) {
+        std::cerr << "Task creation failed!\n"
+                  << "Usage: add *TaskName" << std::endl;
+
+        return false;
+    }
+
+    if (add_task(task_file, *new_unique_task)) {
         std::cout << "Adding task success!" << std::endl;
         return true;
     }
@@ -67,15 +81,13 @@ bool add(const char **argv) {
     return false;
 }
 
-static std::unique_ptr<Task> create_shr_task_ptr(const char *argv[]) {
-    std::string task_name;
-    TaskStatus status;
-
-    if (!argv && !argv[2])
+static std::unique_ptr<Task> create_unique_task_ptr(const char **argv) {
+    if (!argv || !argv[2])
         return nullptr;
 
-    task_name = argv[2];
-    status = argv[3] ? num_to_status(std::stoi(argv[3])) : TaskStatus::ONGOING;
+    std::string task_name = argv[2];
+    TaskStatus status =
+        argv[3] ? num_to_status(std::stoi(argv[3])) : TaskStatus::ONGOING;
 
     return std::make_unique<Task>(task_name, status);
 }
