@@ -25,7 +25,9 @@ struct Entry {
     Func func;
 };
 
-static constexpr std::array<Entry, NUMBER_OF_FUNCS> func_arr = {{"add", add}};
+static constexpr std::array<Entry, NUMBER_OF_FUNCS> func_arr = {
+    {{"add", add}, {"list", list}}};
+
 static constexpr Func find_func(const std::string_view &operation);
 static void display_usage_cmd(const std::string_view &prg_exe_name);
 
@@ -79,6 +81,12 @@ static bool add(const char **argv) {
 
     std::cerr << "Failed to add task!" << std::endl;
     return false;
+}
+
+static bool list(const char **) {
+    std::fstream task_file(TASK_FILE, std::ios::in | std::ios::binary);
+
+    return list_task(task_file);
 }
 
 static std::unique_ptr<Task> create_unique_task_ptr(const char **argv) {
