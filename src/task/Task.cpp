@@ -17,11 +17,13 @@ static bool process_task(
 
 static bool is_name_len_err(const int name_len);
 
-bool add_task(std::fstream &task_file, const Task &task) {
+bool add_task(std::fstream &task_file, const Task &task_ptr) {
     if (!is_file_good(task_file))
         return false;
 
-    return write_task(task_file, task);
+    auto new_task = std::make_unique<Task>();
+
+    return write_task(task_file, task_ptr);
 }
 
 bool list_task(std::fstream &task_file) {
@@ -133,6 +135,8 @@ constexpr const char *status_to_str(TaskStatus status) {
         return "Ongoing";
     case TaskStatus::COMPLETED:
         return "Complete";
+    case TaskStatus::UNDEFINED:
+        return "Undefined";
     }
 
     return "Unknown";
@@ -146,5 +150,5 @@ TaskStatus num_to_status(const unsigned int num) {
         return TaskStatus::COMPLETED;
     }
 
-    throw "Invalid number status";
+    return TaskStatus::UNDEFINED;
 }

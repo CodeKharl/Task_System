@@ -4,7 +4,7 @@
 
 #define TASK_FILE "task.dat"
 
-enum TaskStatus { ONGOING, COMPLETED };
+enum TaskStatus { ONGOING, COMPLETED, UNDEFINED };
 
 class Task final {
   private:
@@ -23,7 +23,7 @@ class Task final {
     TaskStatus getStatus() const { return status; }
 };
 
-bool add_task(std::fstream &task_file, const Task &task);
+bool add_task(std::fstream &task_file, const Task &task_ptr);
 bool list_task(std::fstream &task_file);
 bool remove_task(std::fstream &task_file, const unsigned int task_num);
 bool modify_task(std::fstream &task_file, const unsigned int task_num,
