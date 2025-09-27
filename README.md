@@ -47,7 +47,7 @@ Run the executable with one of the following commands:
 
 - **ID** → The numeric ID of the task to modify.  
 - **NewTaskName** → The updated task description.  
-- **NewStatus** → The new task status (e.g., `pending`, `in-progress`, `done`).  
+- **NewStatusNumber** → The new task status (e.g., `0: ONGOING`, `1: COMPLETED`, `Rest of Nums: UNDEFINED`).  
 
 ---
 
