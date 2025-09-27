@@ -1,15 +1,12 @@
 #include <cstddef>
 #include <format>
 #include <fstream>
-#include <functional>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 
-#include "shared/file.hpp"
 #include "task/Task.hpp"
 
 static bool add(const char **argv);
@@ -17,8 +14,10 @@ static bool remove(const char **argv);
 static bool list(const char **argv);
 static bool modify(const char **argv);
 
-static std::unique_ptr<Task> create_unique_task_ptr(const char **argv);
-static TaskStatus create_task_status(const char **argv);
+static std::unique_ptr<Task>
+create_unique_task_ptr(const char **argv, const unsigned int start_index);
+static TaskStatus create_task_status(const char **argv,
+                                     const unsigned int status_index);
 
 static constexpr std::size_t NUMBER_OF_FUNCS = 4;
 using Func = bool (*)(const char *argv[]);
@@ -29,7 +28,7 @@ struct Entry {
 };
 
 static constexpr std::array<Entry, NUMBER_OF_FUNCS> func_arr = {
-    {{"add", add}, {"list", list}, {"remove", remove}}};
+    {{"add", add}, {"list", list}, {"remove", remove}, {"modify", modify}}};
 
 static constexpr Func find_func(const std::string_view &operation);
 
@@ -66,7 +65,7 @@ static constexpr Func find_func(const std::string_view &operation) {
 
 static bool add(const char **argv) {
     std::fstream task_file(TASK_FILE, std::ios::binary | std::ios::app);
-    auto new_unique_task = create_unique_task_ptr(argv);
+    auto new_unique_task = create_unique_task_ptr(argv, 2);
 
     if (!new_unique_task) {
         std::cerr << "Task creation failed!\n"
@@ -121,41 +120,52 @@ static bool remove(const char **argv) {
 
 static bool modify(const char **argv) {
     std::fstream task_file(TASK_FILE, std::ios::in | std::ios::binary);
-    auto new_task_ptr = create_unique_task_ptr(argv);
+    std::unique_ptr<Task> new_task_ptr;
 
-    if (!new_task_ptr) {
+    if (!argv || !argv[2] ||
+        !(new_task_ptr = create_unique_task_ptr(argv, 3))) {
+        std::cerr << "Invalid arguments!\n"
+                  << "Usage: " << argv[0] << " modify *ID *TaskName *Status"
+                  << std::endl;
         return false;
     }
 
     try {
         if (modify_task(task_file, std::stoi(argv[2]), *new_task_ptr)) {
+            std::cout << "Modify task success!" << std::endl;
+            return true;
         }
+
+        std::cerr << "Failed to modify the task!" << std::endl;
     } catch (const std::invalid_argument &) {
+        std::cerr << "Invalid ID! (must be a integer)" << std::endl;
     }
 
     return false;
 }
 
-static std::unique_ptr<Task> create_unique_task_ptr(const char **argv) {
-    if (!argv || !argv[2])
+static std::unique_ptr<Task>
+create_unique_task_ptr(const char **argv, const unsigned int start_index) {
+    if (!argv || !argv[start_index])
         return nullptr;
 
-    std::string task_name = argv[2];
-    TaskStatus status = create_task_status(argv);
+    std::string task_name = argv[start_index];
+    TaskStatus status = create_task_status(argv, start_index + 1);
 
     return std::make_unique<Task>(task_name, status);
 }
 
-TaskStatus create_task_status(const char **argv) {
+TaskStatus create_task_status(const char **argv,
+                              const unsigned int status_index) {
     auto handle_status_error = [](const char *msg) {
         std::cerr << msg << ", defaulting to Undefined\n";
     };
 
     TaskStatus status = TaskStatus::ONGOING;
 
-    if (argv[3]) {
+    if (argv[status_index]) {
         try {
-            status = num_to_status(std::stoi(argv[3]));
+            status = num_to_status(std::stoi(argv[status_index]));
         } catch (const std::invalid_argument &) {
             handle_status_error("Invalid status! (must a number)");
             return TaskStatus::UNDEFINED;
