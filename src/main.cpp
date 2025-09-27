@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -15,7 +16,9 @@ static bool add(const char **argv);
 static bool remove(const char **argv);
 static bool list(const char **argv);
 static bool modify(const char **argv);
+
 static std::unique_ptr<Task> create_unique_task_ptr(const char **argv);
+static TaskStatus create_task_status(const char **argv);
 
 static constexpr std::size_t NUMBER_OF_FUNCS = 4;
 using Func = bool (*)(const char *argv[]);
@@ -29,11 +32,15 @@ static constexpr std::array<Entry, NUMBER_OF_FUNCS> func_arr = {
     {{"add", add}, {"list", list}}};
 
 static constexpr Func find_func(const std::string_view &operation);
-static void display_usage_cmd(const std::string_view &prg_exe_name);
 
 int main(int argc, const char **argv) {
+    auto handle_usage_cmd = [](const std::string_view &prg_exe_name) {
+        std::cerr << "Usage: " << prg_exe_name << " <command>\n"
+                  << "Commands: add, list, remove, modify" << std::endl;
+    };
+
     if (argc <= 1) {
-        display_usage_cmd(argv[0]);
+        handle_usage_cmd(argv[0]);
         return 1;
     }
 
@@ -43,7 +50,7 @@ int main(int argc, const char **argv) {
     }
 
     std::cerr << "Unknown command : " << operation << std::endl;
-    display_usage_cmd(argv[0]);
+    handle_usage_cmd(argv[0]);
 
     return 1;
 }
@@ -55,11 +62,6 @@ static constexpr Func find_func(const std::string_view &operation) {
     }
 
     return nullptr;
-}
-
-static void display_usage_cmd(const std::string_view &prg_exe_name) {
-    std::cerr << "Usage: " << prg_exe_name << " <command>\n"
-              << "Commands: add, list, remove, modify" << std::endl;
 }
 
 static bool add(const char **argv) {
@@ -74,13 +76,13 @@ static bool add(const char **argv) {
         return false;
     }
 
-    if (add_task(task_file, *new_unique_task)) {
-        std::cout << "Adding task success!" << std::endl;
-        return true;
+    if (!add_task(task_file, *new_unique_task)) {
+        std::cerr << "Failed to add task!" << std::endl;
+        return false;
     }
 
-    std::cerr << "Failed to add task!" << std::endl;
-    return false;
+    std::cout << "Adding task success!" << std::endl;
+    return true;
 }
 
 static bool list(const char **) {
@@ -89,13 +91,36 @@ static bool list(const char **) {
     return list_task(task_file);
 }
 
+static bool remove(const char **argv) {}
+
 static std::unique_ptr<Task> create_unique_task_ptr(const char **argv) {
     if (!argv || !argv[2])
         return nullptr;
 
     std::string task_name = argv[2];
-    TaskStatus status =
-        argv[3] ? num_to_status(std::stoi(argv[3])) : TaskStatus::ONGOING;
+    TaskStatus status = create_task_status(argv);
 
     return std::make_unique<Task>(task_name, status);
+}
+
+TaskStatus create_task_status(const char **argv) {
+    auto handle_status_error = [](const char *msg) {
+        std::cerr << msg << ", defaulting to Undefined\n";
+    };
+
+    TaskStatus status = TaskStatus::ONGOING;
+
+    if (argv[3]) {
+        try {
+            status = num_to_status(std::stoi(argv[3]));
+        } catch (const std::invalid_argument &) {
+            handle_status_error("Invalid status! (must a number)");
+            return TaskStatus::UNDEFINED;
+        } catch (const std::out_of_range &) {
+            handle_status_error("Status out of range");
+            return TaskStatus::UNDEFINED;
+        }
+    }
+
+    return status;
 }
