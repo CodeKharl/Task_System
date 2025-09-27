@@ -29,7 +29,7 @@ struct Entry {
 };
 
 static constexpr std::array<Entry, NUMBER_OF_FUNCS> func_arr = {
-    {{"add", add}, {"list", list}}};
+    {{"add", add}, {"list", list}, {"remove", remove}}};
 
 static constexpr Func find_func(const std::string_view &operation);
 
@@ -66,17 +66,19 @@ static constexpr Func find_func(const std::string_view &operation) {
 
 static bool add(const char **argv) {
     std::fstream task_file(TASK_FILE, std::ios::binary | std::ios::app);
-
-    std::unique_ptr<Task> new_unique_task = create_unique_task_ptr(argv);
+    auto new_unique_task = create_unique_task_ptr(argv);
 
     if (!new_unique_task) {
         std::cerr << "Task creation failed!\n"
-                  << "Usage: add *TaskName" << std::endl;
+                  << "Usage: " << argv[0] << " add *TaskName" << std::endl;
 
         return false;
     }
 
-    if (!add_task(task_file, *new_unique_task)) {
+    bool is_success = add_task(task_file, *new_unique_task);
+    task_file.close();
+
+    if (!is_success) {
         std::cerr << "Failed to add task!" << std::endl;
         return false;
     }
@@ -88,10 +90,51 @@ static bool add(const char **argv) {
 static bool list(const char **) {
     std::fstream task_file(TASK_FILE, std::ios::in | std::ios::binary);
 
-    return list_task(task_file);
+    bool is_success = list_task(task_file);
+    task_file.close();
+
+    return is_success;
 }
 
-static bool remove(const char **argv) {}
+static bool remove(const char **argv) {
+    std::fstream task_file(TASK_FILE, std::ios::in | std::ios::binary);
+
+    if (!argv || !argv[2]) {
+        std::cerr << "Argument doesn't contain ID\n"
+                  << "Usage: " << argv[0] << " remove *ID" << std::endl;
+        return false;
+    }
+
+    try {
+        if (remove_task(task_file, std::stoi(argv[2]))) {
+            std::cout << "Remove task success!" << std::endl;
+            return true;
+        }
+
+        std::cerr << "Failed to remove the task!" << std::endl;
+    } catch (const std::invalid_argument &) {
+        std::cerr << "Invalid ID! (must be a integer)" << std::endl;
+    }
+
+    return false;
+}
+
+static bool modify(const char **argv) {
+    std::fstream task_file(TASK_FILE, std::ios::in | std::ios::binary);
+    auto new_task_ptr = create_unique_task_ptr(argv);
+
+    if (!new_task_ptr) {
+        return false;
+    }
+
+    try {
+        if (modify_task(task_file, std::stoi(argv[2]), *new_task_ptr)) {
+        }
+    } catch (const std::invalid_argument &) {
+    }
+
+    return false;
+}
 
 static std::unique_ptr<Task> create_unique_task_ptr(const char **argv) {
     if (!argv || !argv[2])
